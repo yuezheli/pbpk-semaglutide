@@ -36,7 +36,7 @@ tspan = (0.0, 800.0);
 include(@projectroot("script/helper-volume-mouse2human.jl"));
 p_homo = updatevolume_human(pbpk_sys, kon_Alb = 1E6, koff_Alb = 3.1); 
 
-u0_exg = Dict([pbpk_sys.C_Plasma_Exo => 0.5E-3/4113/3.126]);
+u0_exg = Dict([pbpk_sys.C_Plasma_Exo => 0.5E-3/MW_semaglutide/3.126]);
 prob_iv = ODEProblem(pbpk_sys, merge(p_homo, u0_exg), tspan);
 
 sol = solve(prob_iv, Rodas5(), reltol=1e-6, abstol=1e-9, saveat = 1.);

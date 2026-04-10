@@ -20,3 +20,4 @@ const ng_per_g = 1E9  # ng/g
 const mm3_per_mL = 1E3 # mm^3/mL
 const um_per_cm = 1E4
 
+const MW_semaglutide = 4113
