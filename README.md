@@ -10,7 +10,7 @@ We demonstrate this model is capable of predicting the PK of semaglutide, a 4.1k
 
 <table>
     <tr>
-        <th> Figure 1. Plasma PK of semaglutide, human </th>
+        <th> Figure 1. Plasma PK of semaglutide (IV), human </th>
     </tr>
     <tr>
         <td> <img src = "deliv/figure/plasma-pk-semaglutide-iv.png" alt = "Semaglutide PK, human"> </td> 
