@@ -46,6 +46,9 @@ function albumin_peptide_pbpk_mtk(; name)
         # --- Drug absorption ---
         bioavailability = 0.8       # drug bioavailability
         k_a = 0.1                   # drug absorption rate [unit = u"1/hr"] 
+
+        # --- Drug infusion ---
+        infusion = 0.       # drug infusion rate 
         
         # --- Volumes [L] ---
         V_Plasma = 0.000944
@@ -334,7 +337,7 @@ function albumin_peptide_pbpk_mtk(; name)
     end
     push!(eqs, D(C_Plasma) ~ (venous_return_endo + L_Lymph_drain*C_LN - (Qs[Lung] + Qs[Lung]*0.002)*C_Plasma + Ksyn_alb*V_Plasma)/V_Plasma
                                 - kon_Alb*C_Plasma*C_Plasma_Albud + koff_Alb*C_Plasma_Exo
-                                + k_a * A_SC_Albud / V_Plasma )
+                                )
 
     venous_return_exo = sum(1:length(orgs)) do j
         if orgs[j] == :Lung
@@ -346,7 +349,9 @@ function albumin_peptide_pbpk_mtk(; name)
         end
     end
     push!(eqs, D(C_Plasma_Exo) ~ (venous_return_exo + L_Lymph_drain*C_LN_Exo - (Qs[Lung] + Qs[Lung]*0.002)*C_Plasma_Exo)/V_Plasma
-                                 + kon_Alb*C_Plasma*C_Plasma_Albud - koff_Alb*C_Plasma_Exo)
+                                 + kon_Alb*C_Plasma*C_Plasma_Albud - koff_Alb*C_Plasma_Exo
+                                 + k_a * A_SC_Albud * bioavailability / V_Plasma 
+                                 + infusion)
 
     venous_return_albud = sum(1:length(orgs)) do j
         if orgs[j] == :Lung
