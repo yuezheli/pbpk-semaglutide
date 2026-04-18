@@ -37,16 +37,19 @@ tspan = (0.0, 800.0);
 # update parameters from mouse to human 
 include(@projectroot("script/helper-volume-mouse2human.jl"));
 p_homo = updatevolume_human(pbpk_sys, kon_Alb = 1E6, koff_Alb = 3.1); 
+prob_iv = ODEProblem(pbpk_sys, p_homo, tspan);
 
-u0_exg = Dict([pbpk_sys.C_Plasma_Exo => 0.5E-3/MW_semaglutide/3.126]);
-prob_iv = ODEProblem(pbpk_sys, merge(p_homo, u0_exg), tspan);
+# set up IV dosing 
+include(@projectroot("script/helper-infusion.jl"));
+iv_point5mg = InfusionCallback(0.5, pbpk_sys, infusion_d = [0.]);
 
-sol = solve(prob_iv, Rodas5(), reltol=1e-6, abstol=1e-9, saveat = 1.);
+# simulation
+sol = solve(prob_iv, Rodas5(), reltol=1e-6, abstol=1e-9, saveat = 1., callback = iv_point5mg);
 
 ## visualization 
-plt_plasma = plot(xlabel="Time (hr)", ylabel="Plasma semaglutude concentration (nM)", yaxis = :log10, yticks = [1E-1, 1, 10, 1E2, 1E3], ylims = [1E-5, 1E3]);
-plot!(sol.t, (sol[pbpk.C_Plasma_Albud] + sol[pbpk.C_Plasma_Exo]) * nmol_per_mol, label = "sims");
-plot!(plasma_data.time_d * hr_per_day, plasma_data.conc_nM, seriestype = :scatter, label = "Overgaard et al., 2019"); 
+plt_plasma = Plots.plot(xlabel="Time (hr)", ylabel="Plasma semaglutude concentration (nM)", yaxis = :log10, yticks = [1E-2, 1E-1, 1, 10, 1E2, 1E3], ylims = [1E-2, 1E3]);
+Plots.plot!(sol.t, (sol[pbpk.C_Plasma_Albud] + sol[pbpk.C_Plasma_Exo]) * nmol_per_mol, label = "sims");
+Plots.plot!(plasma_data.time_d * hr_per_day, plasma_data.conc_nM, seriestype = :scatter, label = "Overgaard et al., 2019"); 
 display(plt_plasma)
 
 savefig(plt_plasma, @projectroot("deliv/figure/plasma-pk-semaglutide-iv.png"));
@@ -89,7 +92,7 @@ function run_pbpk_iv_app()
     lines!(ax, time_obs, li_obs, label = "Large Intestine (IS)", linewidth = 3, color = :green)
     
     axislegend(ax, position = :rt)
-    GLMakie.ylims!(ax, 1e-2, 1e3)
+    GLMakie.ylims!(ax, 1e-3, 1e2)
 
     # --- The Update Engine ---
     # This block runs every time any slider is moved
@@ -97,11 +100,11 @@ function run_pbpk_iv_app()
         
         new_prob = deepcopy(prob_iv)
 
-        new_prob[pbpk.C_Plasma_Exo] = (dose * 1E-3) / MW_semaglutide / 3.126
+        iv_new = InfusionCallback(dose * 1E-3, pbpk_sys, infusion_d = [0.]);
         
         new_prob.ps[pbpk_sys.koff_Alb] = koff
         
-        sol = solve(new_prob, Rodas5(), reltol=1e-6, abstol=1e-9, saveat=1.0) 
+        sol = solve(new_prob, Rodas5(), reltol=1e-6, abstol=1e-9, saveat=1.0, callback = iv_new) 
         
         # 4. Extract data and push to Observables
         time_obs[] = sol.t
