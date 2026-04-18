@@ -40,8 +40,12 @@ function albumin_peptide_pbpk_mtk(; name)
         r_S = 4.44               # [unit = u"nm"] Small pore radius
 
         # --- Albumin:exogenous binding ---
-        kon_Alb = 3.6E9         # [unit = u"1/M/hr"] 
+        kon_Alb = 3.6E9        # [unit = u"1/M/hr"] 
         koff_Alb = 3.1         # [unit = u"1/hr"] 
+
+        # --- Drug absorption ---
+        bioavailability = 0.8       # drug bioavailability
+        k_a = 0.1                   # drug absorption rate [unit = u"1/hr"] 
         
         # --- Volumes [L] ---
         V_Plasma = 0.000944
@@ -144,6 +148,7 @@ function albumin_peptide_pbpk_mtk(; name)
     VISs = [V_IS_Lung, V_IS_Heart, V_IS_Kidney, V_IS_Muscle, V_IS_Skin, V_IS_Liver, V_IS_Brain, V_IS_Adipose, V_IS_Thymus, V_IS_Bone, V_IS_SI, V_IS_LI, V_IS_Spleen, V_IS_Pancreas, V_IS_Other]
     VEs = [V_E_Lung, V_E_Heart, V_E_Kidney, V_E_Muscle, V_E_Skin, V_E_Liver, V_E_Brain, V_E_Adipose, V_E_Thymus, V_E_Bone, V_E_SI, V_E_LI, V_E_Spleen, V_E_Pancreas, V_E_Other]
     
+    @variables A_SC_Albud(t) = 0.0                             # Amount of drug in the depo [umol]
     @variables C_Plasma(t)=C_0_endo_Alb C_LN(t)=Epsilon        # Endogenous albumin
     @variables C_Plasma_Exo(t)=0.0 C_LN_Exo(t)=0.0             # Exogenous albumin
     @variables C_Plasma_Albud(t)=Epsilon C_LN_Albud(t)=Epsilon # Exogenous albumin-binding protein
@@ -314,6 +319,9 @@ function albumin_peptide_pbpk_mtk(; name)
         push!(eqs, D(CE_Albud) ~ CL_up_baseline*(CV_Albud + CIS_Albud) - k_deg*CE_Albud)
     end
 
+    # --- Depot of drug ---
+    push!(eqs, D(A_SC_Albud) ~ (-k_a * A_SC_Albud))
+
     # --- Central Plasma and Lymph Node Equations ---
     venous_return_endo = sum(1:length(orgs)) do j
         if orgs[j] == :Lung
@@ -325,7 +333,8 @@ function albumin_peptide_pbpk_mtk(; name)
         end
     end
     push!(eqs, D(C_Plasma) ~ (venous_return_endo + L_Lymph_drain*C_LN - (Qs[Lung] + Qs[Lung]*0.002)*C_Plasma + Ksyn_alb*V_Plasma)/V_Plasma
-                                - kon_Alb*C_Plasma*C_Plasma_Albud + koff_Alb*C_Plasma_Exo )
+                                - kon_Alb*C_Plasma*C_Plasma_Albud + koff_Alb*C_Plasma_Exo
+                                + k_a * A_SC_Albud / V_Plasma )
 
     venous_return_exo = sum(1:length(orgs)) do j
         if orgs[j] == :Lung
