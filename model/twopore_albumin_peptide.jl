@@ -151,7 +151,7 @@ function albumin_peptide_pbpk_mtk(; name)
     VISs = [V_IS_Lung, V_IS_Heart, V_IS_Kidney, V_IS_Muscle, V_IS_Skin, V_IS_Liver, V_IS_Brain, V_IS_Adipose, V_IS_Thymus, V_IS_Bone, V_IS_SI, V_IS_LI, V_IS_Spleen, V_IS_Pancreas, V_IS_Other]
     VEs = [V_E_Lung, V_E_Heart, V_E_Kidney, V_E_Muscle, V_E_Skin, V_E_Liver, V_E_Brain, V_E_Adipose, V_E_Thymus, V_E_Bone, V_E_SI, V_E_LI, V_E_Spleen, V_E_Pancreas, V_E_Other]
     
-    @variables A_SC_Albud(t) = 0.0                             # Amount of drug in the depot [mol]
+    @variables A_SC(t) = 0.0                             # Amount of drug in the depot [mol]
     @variables C_Plasma(t)=C_0_endo_Alb C_LN(t)=Epsilon        # Endogenous albumin
     @variables C_Plasma_Exo(t)=0.0 C_LN_Exo(t)=0.0             # Exogenous albumin
     @variables C_Plasma_Albud(t)=Epsilon C_LN_Albud(t)=Epsilon # Exogenous albumin-binding protein
@@ -172,7 +172,7 @@ function albumin_peptide_pbpk_mtk(; name)
     CE_Albud_vars = [(@variables $(Symbol("C_E_Albud_", o))(t) = Epsilon)[1] for o in orgs] 
     # FcRn
     F_vars   = [(@variables $(Symbol("FcRn_", o))(t) = FcRn_total)[1] for o in orgs]
-    vars = [C_Plasma; C_Plasma_Exo; A_SC_Albud; C_LN; C_LN_Exo; CV_vars; CV_Exo_vars; CIS_vars; CIS_Exo_vars; UB_vars; UB_Exo_vars; B_vars; B_Exo_vars; F_vars; C_Plasma_Albud; C_LN_Albud; CV_Albud_vars; CE_Albud_vars; CIS_Albud_vars]
+    vars = [C_Plasma; C_Plasma_Exo; A_SC; C_LN; C_LN_Exo; CV_vars; CV_Exo_vars; CIS_vars; CIS_Exo_vars; UB_vars; UB_Exo_vars; B_vars; B_Exo_vars; F_vars; C_Plasma_Albud; C_LN_Albud; CV_Albud_vars; CE_Albud_vars; CIS_Albud_vars]
 
     # Derived Molecular Constants (albumin)
     a_e = 0.5614 * (MW/1000)^(1/3) + 0.09611 * (MW/1000)^(2/3)
@@ -323,7 +323,7 @@ function albumin_peptide_pbpk_mtk(; name)
     end
 
     # --- Depot of drug ---
-    push!(eqs, D(A_SC_Albud) ~ (-k_a * A_SC_Albud))
+    push!(eqs, D(A_SC) ~ (-k_a * A_SC))
 
     # --- Central Plasma and Lymph Node Equations ---
     venous_return_endo = sum(1:length(orgs)) do j
@@ -350,7 +350,7 @@ function albumin_peptide_pbpk_mtk(; name)
     end
     push!(eqs, D(C_Plasma_Exo) ~ (venous_return_exo + L_Lymph_drain*C_LN_Exo - (Qs[Lung] + Qs[Lung]*0.002)*C_Plasma_Exo)/V_Plasma
                                  + kon_Alb*C_Plasma*C_Plasma_Albud - koff_Alb*C_Plasma_Exo
-                                 + k_a * A_SC_Albud * bioavailability / V_Plasma 
+                                 + k_a * A_SC * bioavailability / V_Plasma 
                                  + infusion)
 
     venous_return_albud = sum(1:length(orgs)) do j
