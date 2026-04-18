@@ -14,11 +14,18 @@ using SymbolicIndexingInterface
 using CSV
 using Sundials 
 
-## observed PK, semaglutide, sc, 0.5 mg
+## observed PK
+# semaglutide, sc, 0.5 mg
 # https://pubmed.ncbi.nlm.nih.gov/30788808/, Figure 2
 plasma_sc = DataFrame(
     time_d = [0.25, 0.51, 0.66, 1.0, 1.28, 1.5, 1.78, 2.0, 2.27, 2.52, 2.99, 4.01, 5.01, 6.01, 7.0],
     conc_nM = [8.88, 10.73, 11.4, 12.1, 12.2, 11.99, 11.88, 11.88, 11.77, 11.67, 11.27, 10.87, 9.87, 9.12, 8.08]
+);
+
+# semaglutide, oral, 10 mg x10
+plasma_oral = DataFrame(
+    time_d = [1.06, 3.06, 5.05, 7.05, 8.06, 9.12, 10.05, 11.07, 13.05, 16.09, 20.02, 23.07, 30.05],
+    conc_nM = [1.59, 4.7, 8.5, 10.79, 11.68, 11.61, 13.58, 11.55, 9.2, 6.73, 4.31, 3.36, 1.52]
 );
 
 ## Setup
@@ -48,11 +55,12 @@ affect_sc!(integrator) = integrator[pbpk_sys.A_SC] += 0.5E-3/MW_semaglutide;
 cb_sc = PeriodicCallback(affect_sc!, 24.0 * 7.0); 
 
 # oral
-u0_oral = Dict([pbpk_sys.A_SC => 1.5E-3/MW_semaglutide]); # mol 
+u0_oral = Dict([pbpk_sys.A_SC => 10E-3/MW_semaglutide]); # mol 
 p_abs_oral = Dict([pbpk_sys.bioavailability => 0.01, pbpk_sys.k_a => 0.0286]);
 prob_oral = remake(prob_homo, u0=u0_oral, p = p_abs_oral);
-affect_oral!(integrator) = integrator[pbpk_sys.A_SC] += 1.5E-3/MW_semaglutide;
-cb_oral = PeriodicCallback(affect_oral!, 24.0);
+oral_dose_times = 24.0:24.0:(24.0 * 9);
+affect_oral!(integrator) = integrator[pbpk_sys.A_SC] += 10E-3/MW_semaglutide;
+cb_oral = PresetTimeCallback(oral_dose_times, affect_oral!);
 
 ## Simulation
 sol_sc = solve(prob_sc, Rodas5(), reltol=1e-6, abstol=1e-9, saveat = 1.0, callback = cb_sc);
@@ -67,3 +75,13 @@ Plots.plot!(plasma_sc.time_d * hr_per_day, plasma_sc.conc_nM, seriestype = :scat
 display(plt_sc)
 
 savefig(plt_sc, @projectroot("deliv/figure/plasma-pk-semaglutide-sc.png"));
+
+plt_oral = Plots.plot(xlabel="Time (hr)", ylabel="Plasma semaglutude concentration (nM)", 
+         yaxis = :log10, yticks = [1E-2, 1E-1, 1, 10, 1E2, 1E3], ylims = [1E-2, 1E3], 
+         xticks = [0, 24, 48, 72, 168, 336, 504, 672], xlims = [0, 672]);
+Plots.plot!(sol_oral.t, (sol_oral[pbpk.C_Plasma_Albud] + sol_oral[pbpk.C_Plasma_Exo]) * nmol_per_mol, label = "sims");
+Plots.plot!(plasma_oral.time_d * hr_per_day, plasma_oral.conc_nM, seriestype = :scatter, label = "Overgaard et al., 2021"); 
+display(plt_oral)
+
+savefig(plt_oral, @projectroot("deliv/figure/plasma-pk-semaglutide-oral.png"));
+
