@@ -51,14 +51,14 @@ include(@projectroot("script/helper-infusion.jl"));
 u0_sc = Dict([pbpk_sys.A_SC => 1E-3/MW_semaglutide]); # mol
 p_abs_sc = Dict([pbpk_sys.bioavailability => 0.84, pbpk_sys.k_a => 0.0253]);  # https://pmc.ncbi.nlm.nih.gov/articles/PMC6437231/
 prob_sc = remake(prob_homo, u0=u0_sc, p=p_abs_sc);
-affect_sc!(integrator) = integrator[pbpk_sys.A_SC] += 0.5E-3/MW_semaglutide;
-cb_sc = PeriodicCallback(affect_sc!, 24.0 * 7.0); 
+affect_sc!(integrator) = integrator[pbpk_sys.A_SC] += 1E-3/MW_semaglutide;
+cb_sc = PeriodicCallback(affect_sc!, hr_per_day * 7.0); 
 
 # oral
 u0_oral = Dict([pbpk_sys.A_SC => 10E-3/MW_semaglutide]); # mol 
 p_abs_oral = Dict([pbpk_sys.bioavailability => 0.01, pbpk_sys.k_a => 0.0286]);
 prob_oral = remake(prob_homo, u0=u0_oral, p = p_abs_oral);
-oral_dose_times = 24.0:24.0:(24.0 * 9);
+oral_dose_times = hr_per_day:hr_per_day:(hr_per_day * 9);
 affect_oral!(integrator) = integrator[pbpk_sys.A_SC] += 10E-3/MW_semaglutide;
 cb_oral = PresetTimeCallback(oral_dose_times, affect_oral!);
 
@@ -85,3 +85,28 @@ display(plt_oral)
 
 savefig(plt_oral, @projectroot("deliv/figure/plasma-pk-semaglutide-oral.png"));
 
+## Additional comparison 
+# set up dosing of 1.5 mg oral everyday, vs sc 0.25 mg 
+u0_sc_point25 = Dict([pbpk_sys.A_SC => 0.25E-3/MW_semaglutide]); # mol
+affect_sc_point25!(integrator) = integrator[pbpk_sys.A_SC] += 0.25E-3/MW_semaglutide;
+cb_sc_point25 = PeriodicCallback(affect_sc_point25!, hr_per_day * 7.0); 
+
+u0_oral_1point5 = Dict([pbpk_sys.A_SC => 1.5E-3/MW_semaglutide]); # mol 
+affect_oral_1point5!(integrator) = integrator[pbpk_sys.A_SC] += 1.5E-3/MW_semaglutide;
+cb_oral_1point5 = PeriodicCallback(affect_oral_1point5!, hr_per_day); 
+
+sol_sc_point25 = solve(remake(prob_sc, u0 = u0_sc_point25), Rodas5(), reltol=1e-6, abstol=1e-9, saveat = 1.0, callback = cb_sc_point25);
+sol_oral_1point5 = solve(remake(prob_oral, u0 = u0_oral_1point5), Rodas5(), reltol=1e-6, abstol=1e-9, saveat = 1.0, callback = cb_oral_1point5);
+
+plt_oral_sc = Plots.plot(xlabel="Time (hr)", ylabel="Semaglutude concentration (nM)", 
+         yaxis = :log10, yticks = [1E-2, 1E-1, 1, 10, 1E2, 1E3], ylims = [1E-2, 1E3], 
+         xticks = [0, 24, 48, 72, 168, 336, 504, 672], xlims = [0, 800]);
+Plots.plot!(sol_sc_point25.t, (sol_sc_point25[pbpk.C_Plasma_Albud] + sol_sc_point25[pbpk.C_Plasma_Exo]) * nmol_per_mol, label = "sc, 0.25 mg, plasma", color = :red);
+Plots.plot!(sol_oral_1point5.t, (sol_oral_1point5[pbpk.C_Plasma_Albud] + sol_oral_1point5[pbpk.C_Plasma_Exo]) * nmol_per_mol, label = "oral, 1.5 mg, plasma", color = :blue);
+Plots.plot!(sol_sc_point25.t, (sol_sc_point25[pbpk.C_IS_Albud_SI] + sol_sc_point25[pbpk.C_IS_Exo_SI]) * nmol_per_mol, label = "sc, 0.25 mg, small interstine", color = :red, linestyle = :dash);
+Plots.plot!(sol_oral_1point5.t, (sol_oral_1point5[pbpk.C_IS_Albud_SI] + sol_oral_1point5[pbpk.C_IS_Exo_SI]) * nmol_per_mol, label = "oral, 1.5 mg, small interstine", color = :blue, linestyle = :dash);
+Plots.plot!(sol_sc_point25.t, (sol_sc_point25[pbpk.C_IS_Albud_LI] + sol_sc_point25[pbpk.C_IS_Exo_LI]) * nmol_per_mol, label = "sc, 0.25 mg, large interstine", color = :red, linestyle = :dot);
+Plots.plot!(sol_oral_1point5.t, (sol_oral_1point5[pbpk.C_IS_Albud_LI] + sol_oral_1point5[pbpk.C_IS_Exo_LI]) * nmol_per_mol, label = "oral, 1.5 mg, large interstine", color = :blue, linestyle = :dot);
+display(plt_oral_sc)
+
+savefig(plt_oral_sc, @projectroot("deliv/figure/pk-semaglutide-sc-oral-gi.png"));
