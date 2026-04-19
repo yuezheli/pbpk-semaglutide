@@ -21,6 +21,16 @@ We demonstrate this model is capable of predicting the PK of semaglutide, a 4.1k
     </tr>
 </table>
 
+The predicted semaglutide concentration in plasma, small intestine (SI), and large intestine (LI) were compared between subcutaneous injection (sc) of 0.25 mg QW and oral intake of 1.5 mg QD. 
+
+<table>
+    <tr>
+        <th> Figure 2. Plasma and organ interstitial PK of semaglutide after subcutaneous (sc) or oral dosing.  </th>
+    </tr>
+    <tr>
+        <td> <img src = "deliv/figure/pk-semaglutide-sc-oral-gi.png" alt = "Semaglutide PK"> </td> 
+    </tr>
+</table>
 
 ## Computational Infrastructure 
 
